@@ -10,7 +10,7 @@ enum OpCode {
     LoopStop
 }
 
-fn parsebf(code: &str) -> Vec<OpCode> {
+fn lex(code: &str) -> Vec<OpCode> {
     /*
         Parse source code and turn it into proper opcodes. Any invalid character
         is just ignored
@@ -52,10 +52,10 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_parsebf() {
+    fn test_lex() {
         let payload = ".-+[]> <#,";  // all invalid characters (space and '#') should be ignored
     
-        let output = parsebf(payload);
+        let output = lex(payload);
         let canary = &Vec::from([
             OpCode::Write,
             OpCode::Dec,
