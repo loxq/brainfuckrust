@@ -6,4 +6,22 @@ cargo test
 
 cargo build
 
-cargo run
+cargo run -- code.bf
+
+## Example
+
+```
+$ cargo run -- helloworld.bf
+    ++++++++++
+    [
+        >+++++++
+        >++++++++++
+        >+++
+        >+<<<<-
+    ]   >++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.
+    --------.>+.>.
+
+
+Hello World!
+
+```
