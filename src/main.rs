@@ -11,6 +11,10 @@ enum OpCode {
 }
 
 fn parsebf(code: &str) -> Vec<OpCode> {
+    /*
+        Parse source code and turn it into proper opcodes. Any invalid character
+        is just ignored
+     */
     let mut operations = Vec::new();
     
     for symbol in code.chars() {
