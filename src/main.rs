@@ -3,6 +3,7 @@ use std::io::Read;
 #[derive(PartialEq)]
 #[derive(Clone)]
 #[derive(Debug)]
+// Direct operators conversions
 enum OpCode {
     IncPtr,
     DecPtr,
@@ -16,6 +17,7 @@ enum OpCode {
 
 #[derive(PartialEq)]
 #[derive(Debug)]
+// "High-level" instructions
 enum Instruction {
     IncPtr,
     DecPtr,
@@ -56,6 +58,9 @@ fn lex(code: &str) -> Vec<OpCode> {
 }
 
 fn parsebf(operations: Vec<OpCode>) -> Vec<Instruction> {
+    /*
+        Parse opcodes and build instructions list, including recursive loops
+     */
     let mut program: Vec<Instruction> = Vec::new();
     let mut loop_start: usize = 0;
     let mut loop_stack: i32 = 0;
@@ -69,7 +74,7 @@ fn parsebf(operations: Vec<OpCode>) -> Vec<Instruction> {
                 OpCode::Dec => Some(Instruction::Dec),
                 OpCode::Write => Some(Instruction::Write),
                 OpCode::Read => Some(Instruction::Read),
-                OpCode::LoopStart => {
+                OpCode::LoopStart => { // track loop starting point
                     loop_start = i;
                     loop_stack += 1;
                     None
@@ -89,6 +94,7 @@ fn parsebf(operations: Vec<OpCode>) -> Vec<Instruction> {
                     loop_stack -= 1;
 
                     if loop_stack == 0 {
+                        // Recursive loop parsing
                         program.push(Instruction::Loop(parsebf(operations[loop_start+1..i].to_vec())));
                     }
                 },
@@ -104,13 +110,21 @@ fn parsebf(operations: Vec<OpCode>) -> Vec<Instruction> {
 }
 
 fn runbf(instructions: &Vec<Instruction>, tape: &mut Vec<u8>, data_pointer: &mut usize, output_buf: &mut String) {
+    /*
+        Run arbitrary brainfuck program.
+        Output is written to &output_buf String.
+        tape is data mempory.
+     */
     for instr in instructions {
         match instr {
             Instruction::IncPtr => *data_pointer += 1,
             Instruction::DecPtr => *data_pointer -= 1,
             Instruction::Inc => tape[*data_pointer] += 1,
             Instruction::Dec => tape[*data_pointer] -= 1,
+            
+            // Uncomment this for direct print to stdout
             //Instruction::Write => print!("{}", tape[*data_pointer] as char),
+
             Instruction::Write => output_buf.push(tape[*data_pointer] as char), // append u8 ascii code to output buffer string
             Instruction::Read => {
                 let mut input: [u8; 1] = [0; 1];
@@ -149,6 +163,7 @@ mod test {
             OpCode::Read
         ]);
 
+        // Compare two Vec
         assert!(output.len() == canary.len() && output.iter().zip(canary).all(|(a, b)| *a == *b));
     }
 
@@ -177,6 +192,7 @@ mod test {
         ]);
         let output = parsebf(payload);
 
+        // Compare two Vec
         assert!(output.len() == canary.len() && output.iter().zip(canary).all(|(a, b)| a == b));
     }
 
@@ -193,7 +209,7 @@ mod test {
     
         let mut output_buf = String::new();
         let mut tape: Vec<u8> = vec![0; 1024];
-        let mut data_pointer = 512;
+        let mut data_pointer = 512;  // start at the middle of tape
         
         let opcodes = lex(helloworld);
         let instructions = parsebf(opcodes);
