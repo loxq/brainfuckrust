@@ -1,3 +1,5 @@
+use std::io::Read;
+
 #[derive(PartialEq)]
 #[derive(Clone)]
 #[derive(Debug)]
@@ -101,9 +103,27 @@ fn parsebf(operations: Vec<OpCode>) -> Vec<Instruction> {
     program
 }
 
-fn runbf(code: &str) -> &str {
-    
-    ""
+fn runbf(instructions: &Vec<Instruction>, tape: &mut Vec<u8>, data_pointer: &mut usize, output_buf: &mut String) {
+    for instr in instructions {
+        match instr {
+            Instruction::IncPtr => *data_pointer += 1,
+            Instruction::DecPtr => *data_pointer -= 1,
+            Instruction::Inc => tape[*data_pointer] += 1,
+            Instruction::Dec => tape[*data_pointer] -= 1,
+            //Instruction::Write => print!("{}", tape[*data_pointer] as char),
+            Instruction::Write => output_buf.push(tape[*data_pointer] as char), // append u8 ascii code to output buffer string
+            Instruction::Read => {
+                let mut input: [u8; 1] = [0; 1];
+                std::io::stdin().read_exact(&mut input).expect("Failed to read stdin");
+                tape[*data_pointer] = input[0];
+            },
+            Instruction::Loop(nested_instructions) => {
+                while tape[*data_pointer] != 0 {
+                    runbf(&nested_instructions, tape, data_pointer, output_buf)
+                }
+            }
+        }
+    }
 }
 
 fn main() {
@@ -160,7 +180,7 @@ mod test {
         assert!(output.len() == canary.len() && output.iter().zip(canary).all(|(a, b)| a == b));
     }
 
-    //#[test]
+    #[test]
     fn test_runbf() {
         let helloworld = "++++++++++
             [
@@ -171,8 +191,15 @@ mod test {
             ]   >++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.
             --------.>+.>.";
     
-        let output = runbf(helloworld);
-        println!("> {}", output);
-        assert_eq!("Hello World!", output);
+        let mut output_buf = String::new();
+        let mut tape: Vec<u8> = vec![0; 1024];
+        let mut data_pointer = 512;
+        
+        let opcodes = lex(helloworld);
+        let instructions = parsebf(opcodes);
+
+        runbf(&instructions, &mut tape, &mut data_pointer, &mut output_buf);
+
+        assert_eq!("Hello World!\n", output_buf);
     }
 }
