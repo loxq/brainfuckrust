@@ -3,7 +3,7 @@ use std::fs::File;
 use std::env;
 
 const TAPESIZE: usize = 1024;
-const MAX_RECURSION: usize = 10;
+const MAX_RECURSION: i32 = 10;
 
 #[derive(PartialEq)]
 #[derive(Clone)]
@@ -90,7 +90,7 @@ fn parsebf(operations: Vec<OpCode>) -> Vec<Instruction> {
                 Some(instruct) => program.push(instruct),
                 None => ()
             }
-        } else {
+        } else if loop_stack < MAX_RECURSION {
             match operation {
                 OpCode::LoopStart => {
                     loop_stack += 1;
@@ -105,6 +105,8 @@ fn parsebf(operations: Vec<OpCode>) -> Vec<Instruction> {
                 },
                 _ => (),
             }
+        } else {
+            panic!("Reached the recursion limit while parsing source code");
         }
     }
     if loop_stack != 0 {
