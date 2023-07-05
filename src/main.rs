@@ -125,8 +125,18 @@ fn runbf(instructions: &Vec<Instruction>, tape: &mut Vec<u8>, data_pointer: &mut
     let mut output = String::new();
     for instr in instructions {
         match instr {
-            Instruction::IncPtr => *data_pointer += 1,
-            Instruction::DecPtr => *data_pointer -= 1,
+            Instruction::IncPtr => { 
+                *data_pointer += 1; 
+                if *data_pointer >= TAPESIZE {
+                    panic!("Tape overflow error !");
+                }
+            },
+            Instruction::DecPtr => { 
+                *data_pointer -= 1;
+                if *data_pointer >= TAPESIZE {  // if underflow it wraps to max value
+                    panic!("Tape overflow error !");
+                }
+            },
             Instruction::Inc => tape[*data_pointer] += 1,
             Instruction::Dec => tape[*data_pointer] -= 1,
             Instruction::Write => {
@@ -159,7 +169,7 @@ fn read_source(filename: &String) -> String {
 
 fn main() {
     let mut tape: Vec<u8> = vec![0; TAPESIZE];
-    let mut data_pointer = TAPESIZE / 2;
+    let mut data_pointer = TAPESIZE / 2; // start in the middle of the tape
 
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
