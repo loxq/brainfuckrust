@@ -1,4 +1,9 @@
-use std::io::Read;
+use std::io::{ self, Read, Write };
+use std::fs::File;
+use std::env;
+
+const TAPESIZE: usize = 1024;
+const MAX_RECURSION: usize = 10;
 
 #[derive(PartialEq)]
 #[derive(Clone)]
@@ -109,10 +114,11 @@ fn parsebf(operations: Vec<OpCode>) -> Vec<Instruction> {
     program
 }
 
-fn runbf(instructions: &Vec<Instruction>, tape: &mut Vec<u8>, data_pointer: &mut usize, output_buf: &mut String) {
+fn runbf<W>(instructions: &Vec<Instruction>, tape: &mut Vec<u8>, data_pointer: &mut usize, mut output: W)
+where W: Write {
     /*
         Run arbitrary brainfuck program.
-        Output is written to &output_buf String.
+        Output characters are written to output.
         tape is data mempory.
      */
     for instr in instructions {
@@ -122,10 +128,9 @@ fn runbf(instructions: &Vec<Instruction>, tape: &mut Vec<u8>, data_pointer: &mut
             Instruction::Inc => tape[*data_pointer] += 1,
             Instruction::Dec => tape[*data_pointer] -= 1,
             
-            // Uncomment this for direct print to stdout
-            //Instruction::Write => print!("{}", tape[*data_pointer] as char),
+            Instruction::Write => write!(&mut output, "{}", tape[*data_pointer] as char).expect("Unable to write to output"),
 
-            Instruction::Write => output_buf.push(tape[*data_pointer] as char), // append u8 ascii code to output buffer string
+            //Instruction::Write => output_buf.push(tape[*data_pointer] as char), // append u8 ascii code to output buffer string
             Instruction::Read => {
                 let mut input: [u8; 1] = [0; 1];
                 std::io::stdin().read_exact(&mut input).expect("Failed to read stdin");
@@ -133,15 +138,37 @@ fn runbf(instructions: &Vec<Instruction>, tape: &mut Vec<u8>, data_pointer: &mut
             },
             Instruction::Loop(nested_instructions) => {
                 while tape[*data_pointer] != 0 {
-                    runbf(&nested_instructions, tape, data_pointer, output_buf)
+                    runbf(&nested_instructions, tape, data_pointer, &mut output)
                 }
             }
         }
     }
 }
 
-fn main() {
+fn read_source(filename: &String) -> String {
+    let mut file = File::open(filename).expect("Source file not found");
+    let mut source = String::new();
+    file.read_to_string(&mut source).expect("Unable to read source file");
 
+    source
+}
+
+fn main() {
+    let mut tape: Vec<u8> = vec![0; TAPESIZE];
+    let mut data_pointer = TAPESIZE / 2;
+
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        println!("Missing source file");
+        println!("Usage: brainfuckrust file.bf");
+    }
+    let filename = &args[1];
+
+    let source = &read_source(filename);
+
+    let opcodes = lex(source);
+    let instructions = parsebf(opcodes);
+    runbf(&instructions, &mut tape, &mut data_pointer, io::stdout());
 }
 
 mod test {
@@ -207,15 +234,17 @@ mod test {
             ]   >++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.
             --------.>+.>.";
     
-        let mut output_buf = String::new();
+        let mut output = Vec::new();
         let mut tape: Vec<u8> = vec![0; 1024];
         let mut data_pointer = 512;  // start at the middle of tape
         
         let opcodes = lex(helloworld);
         let instructions = parsebf(opcodes);
 
-        runbf(&instructions, &mut tape, &mut data_pointer, &mut output_buf);
+        runbf(&instructions, &mut tape, &mut data_pointer, &mut output);
 
-        assert_eq!("Hello World!\n", output_buf);
+        let output = String::from_utf8(output).expect("Output should be UTF-8");
+
+        assert_eq!("Hello World!\n", output);
     }
 }
