@@ -1,4 +1,4 @@
-use std::io::{ self, Read, Write };
+use std::io::Read;
 use std::fs::File;
 use std::env;
 
@@ -116,23 +116,23 @@ fn parsebf(operations: Vec<OpCode>) -> Vec<Instruction> {
     program
 }
 
-fn runbf<W>(instructions: &Vec<Instruction>, tape: &mut Vec<u8>, data_pointer: &mut usize, mut output: W)
-where W: Write {
+fn runbf(instructions: &Vec<Instruction>, tape: &mut Vec<u8>, data_pointer: &mut usize) -> String{
     /*
         Run arbitrary brainfuck program.
         Output characters are written to output.
         tape is data mempory.
      */
+    let mut output = String::new();
     for instr in instructions {
         match instr {
             Instruction::IncPtr => *data_pointer += 1,
             Instruction::DecPtr => *data_pointer -= 1,
             Instruction::Inc => tape[*data_pointer] += 1,
             Instruction::Dec => tape[*data_pointer] -= 1,
-            
-            Instruction::Write => write!(&mut output, "{}", tape[*data_pointer] as char).expect("Unable to write to output"),
-
-            //Instruction::Write => output_buf.push(tape[*data_pointer] as char), // append u8 ascii code to output buffer string
+            Instruction::Write => {
+                output.push(tape[*data_pointer] as char);   // append u8 ascii code to output buffer string
+                print!("{}", tape[*data_pointer] as char)
+            },
             Instruction::Read => {
                 let mut input: [u8; 1] = [0; 1];
                 std::io::stdin().read_exact(&mut input).expect("Failed to read stdin");
@@ -140,11 +140,13 @@ where W: Write {
             },
             Instruction::Loop(nested_instructions) => {
                 while tape[*data_pointer] != 0 {
-                    runbf(&nested_instructions, tape, data_pointer, &mut output)
+                    let inner_output = runbf(&nested_instructions, tape, data_pointer);
+                    output.push_str(&inner_output);
                 }
             }
         }
     }
+    output
 }
 
 fn read_source(filename: &String) -> String {
@@ -170,9 +172,10 @@ fn main() {
 
     let opcodes = lex(source);
     let instructions = parsebf(opcodes);
-    runbf(&instructions, &mut tape, &mut data_pointer, io::stdout());
+    runbf(&instructions, &mut tape, &mut data_pointer);
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
 
@@ -236,16 +239,13 @@ mod test {
             ]   >++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.
             --------.>+.>.";
     
-        let mut output = Vec::new();
         let mut tape: Vec<u8> = vec![0; 1024];
         let mut data_pointer = 512;  // start at the middle of tape
         
         let opcodes = lex(helloworld);
         let instructions = parsebf(opcodes);
 
-        runbf(&instructions, &mut tape, &mut data_pointer, &mut output);
-
-        let output = String::from_utf8(output).expect("Output should be UTF-8");
+        let output = runbf(&instructions, &mut tape, &mut data_pointer);
 
         assert_eq!("Hello World!\n", output);
     }
