@@ -1,4 +1,4 @@
-# Brainfuck written in plain Rust
+# Brainfuck interpreter written in plain Rust
 
 ## Usage
 
